@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="description" content="Smart attendance tracking and management tool for students. Track your attendance, simulate scenarios, and stay above your target percentage." />
+    <meta name="google-site-verification" content="hQVJ7mOa7zxgFxrZ0AZW48F755rSomwP8smV1NHbOT0" />
+    <meta name="keywords" content="attendance tracker, bunkoo meter, class attendance, student attendance, attendance calculator" />
+    <title>Bunkoo Meter</title>
+    <meta name="theme-color" content="#09090b">
+    <link rel="icon" href="./logo.png" type="image/png">
+    <link rel="apple-touch-icon" href="./logopic.png?v=5">
+    <link rel="manifest" href="./manifest.json?v=5">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (Required for styling) -->
+    <link rel="stylesheet" href="./tailwind.css?v=2.5">
+
+    <link rel="stylesheet" href="./styles.css?v=1.4">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+      // Initialize modular SDK separately (compat v10.7.1 and modular v10.12.0 have separate registries)
+      try {
+        const app = initializeApp(firebaseConfig, 'firestore-modular');
+        const db = getFirestore(app);
+        window.getFirestore = () => db;
+      } catch(e) {
+        // If already initialized, just get the existing one
+        console.warn('Modular Firebase init:', e.message);
+      }
+      window.firestoreDoc = doc;
+      window.firestoreSetDoc = setDoc;
+      window.firestoreGetDoc = getDoc;
+      window.firestoreUpdateDoc = updateDoc;
+      window.firestoreDeleteDoc = deleteDoc;
+      window.firestoreOnSnapshot = onSnapshot;
+      window.firestoreServerTimestamp = serverTimestamp;
+    </script>
+    
+    <!-- idb for IndexedDB -->
+    <script src="https://cdn.jsdelivr.net/npm/idb@7/build/umd.js"></script>
+
+    <!-- Firebase Configuration -->
+    <script src="./firebase.config.js?v=1.2"></script>
+    
+    <script src="./config.js"></script>
+
+    <!-- Initialize Firebase and Analytics -->
+    <script>
+      // Initialize Firebase
+      if (typeof firebaseConfig !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        
+        // Initialize Analytics if measurementId is provided
+        if (firebaseConfig.measurementId) {
+          firebase.analytics();
+        }
+
+        // App Check — protects your Firebase API key from abuse
+        // Setup: Firebase Console → App Check → Register with reCAPTCHA v3
+        // Then replace YOUR_RECAPTCHA_V3_SITE_KEY below with your actual key
+        if (firebase.appCheck) {
+          const appCheck = firebase.appCheck();
+          // appCheck.activate('YOUR_RECAPTCHA_V3_SITE_KEY', true);
+        }
+      }
+
+      // Register Service Worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch(() => {});
+        });
+      }
+    </script>
+    
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Firebase App Check SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js"></script>
+</head>
+  <body>
+    <div id="offline-banner" style="display: none; width: 100%; background: #f59e0b; color: #fff; text-align: center; padding: 4px; font-size: 12px; font-weight: bold; position: fixed; top: 0; z-index: 9999;">
+      You're offline — AI features paused 📡
+    </div>
+    <div id="root"></div>
+    <div class="watermark">Designed by Ajay Mishra</div>
+    <script src="./app.js?v=3.0"></script>
+  </body>
+</html>

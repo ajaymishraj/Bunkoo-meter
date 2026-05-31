@@ -1,0 +1,67 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "DEPLOYMENT_GUIDE.md",
+      "QUICK_START.txt",
+      "DEPLOYMENT_CHECKLIST.md",
+      "README.md",
+      "START_HERE.txt",
+      "deploy.bat",
+      ".vscode/**",
+      "**/*.bat",
+      "**/*.exe",
+      "**/*.sh",
+      "app.jsx",
+      "app.compiled.js",
+      "package.json",
+      "package-lock.json",
+      ".babelrc",
+      "input.css",
+      "tailwind.config.js",
+      "test.js",
+      "uuid.js"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=7200"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(js|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=300"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,352 @@
+:root {
+  --bg-color: #09090b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: #f4f4f5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  /* Improve mobile performance */
+  -webkit-overflow-scrolling: touch;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Scrollbar for Calendar Timeline */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.watermark {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 1000;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .watermark {
+    bottom: 10px;
+    right: 10px;
+    font-size: 0.6rem;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+button {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  /* Improve button performance on mobile */
+  touch-action: manipulation;
+}
+
+/* Disable hover effects on disabled buttons */
+button:disabled {
+  pointer-events: none;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Smooth color transitions for circular progress - optimized */
+svg circle {
+  transition: stroke 0.5s ease-in-out;
+  will-change: auto;
+}
+
+/* Optimize animations for mobile */
+@media (max-width: 768px) {
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.15s !important;
+  }
+  
+  /* Reduce blur on mobile for better performance */
+  .blur-\[80px\], .blur-\[100px\], .blur-\[120px\] {
+    filter: blur(30px) !important;
+  }
+
+  /* Reduce backdrop-blur — heavy GPU cost on mobile */
+  .backdrop-blur-sm, .backdrop-blur-md, .backdrop-blur-xl {
+    -webkit-backdrop-filter: blur(4px) !important;
+    backdrop-filter: blur(4px) !important;
+  }
+
+  /* GPU-composited scroll for smooth scrolling */
+  #root {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+    will-change: scroll-position;
+  }
+
+  /* Lazy-render off-screen sections for paint performance */
+  .mb-10, .mb-12 {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 300px;
+  }
+}
+
+/* Disable hover effects on touch devices (prevents sticky hover on mobile) */
+@media (hover: none) and (pointer: coarse) {
+  *:hover {
+    transition-duration: 0s !important;
+  }
+  
+  /* Prevent gradient/shadow transitions on touch — heavy repaints */
+  .shadow-lg, .shadow-2xl {
+    box-shadow: none !important;
+  }
+}
+
+/* GPU layer hints for animated elements */
+svg circle,
+svg polyline,
+svg polygon {
+  will-change: auto;
+  transform: translateZ(0);
+}
+
+/* Logo styling - optimized */
+img[alt*="Bunkoo"] {
+  transition: transform 0.2s ease;
+  max-height: 56px;
+  will-change: auto;
+}
+
+img[alt*="Bunkoo"]:hover {
+  transform: scale(1.03);
+}
+
+/* Better touch targets for mobile */
+@media (max-width: 640px) {
+  button {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  
+  /* Reduce padding on mobile */
+  .p-4, .p-5, .p-6 {
+    padding: 0.75rem !important;
+  }
+}
+
+/* Fade in animation - optimized */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Pulse animation for alerts - optimized */
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+}
+
+.animate-pulse-border {
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+/* Performance optimizations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
+/* Improve input appearance on mobile */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Better range slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-track {
+  background: #27272a;
+  height: 8px;
+  border-radius: 4px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #3b82f6;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  border: 3px solid #09090b;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  margin-top: -6px;
+}
+
+input[type="range"]::-moz-range-track {
+  background: #27272a;
+  height: 8px;
+  border-radius: 4px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  appearance: none;
+  -moz-appearance: none;
+  background: #3b82f6;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  border: 3px solid #09090b;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+/* === CSS Animations (replaces framer-motion) === */
+
+/* Fade up — cards, stat items */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.3s ease-out both;
+}
+
+/* Scale in — forms, donut chart */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out both;
+}
+
+/* Slide right — simulation bars, timeline */
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-right {
+  animation: slideRight 0.3s ease-out both;
+}
+
+/* Slide down — calendar summary */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out both;
+}
+
+/* Slide up — notification toast */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out both;
+}
+
+/* Width expand — progress bars */
+@keyframes expandWidth {
+  from { width: 0; }
+}
+.animate-expand {
+  animation: expandWidth 0.8s ease-out both;
+}
+
+/* Slow spin — Aurora conic gradient */
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spinSlow 60s linear infinite;
+}
+
+/* Blob drift — Aurora floating blobs */
+@keyframes blobDrift1 {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(40px, -30px); }
+  50% { transform: translate(-20px, 15px); }
+  75% { transform: translate(10px, -10px); }
+}
+.animate-blob-1 {
+  animation: blobDrift1 20s ease-in-out infinite;
+}
+
+@keyframes blobDrift2 {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-50px, 40px); }
+  50% { transform: translate(25px, -30px); }
+  75% { transform: translate(-15px, 20px); }
+}
+.animate-blob-2 {
+  animation: blobDrift2 25s ease-in-out infinite;
+}
+
+/* Desktop width constraint for Friends page */
+@media (min-width: 1024px) {
+  .lg\:max-w-\[60\%\] {
+    max-width: 60%;
+  }
+}

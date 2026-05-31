@@ -1,0 +1,24 @@
+{
+  "name": "Bunkoo Meter",
+  "short_name": "Bunkoo",
+  "description": "Smart attendance tracking and management tool",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "logopic.png?v=5",
+      "sizes": "192x192 361x306",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logopic.png?v=5",
+      "sizes": "512x512 361x306",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
