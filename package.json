@@ -3,8 +3,9 @@
   "private": true,
   "description": "Smart attendance tracking and management tool",
   "scripts": {
-    "build": "babel app.jsx --out-file app.js",
-    "watch": "babel app.jsx --out-file app.js --watch"
+    "build": "babel app.jsx --out-file app.js && tailwindcss -i ./src/input.css -o ./tailwind.css --minify",
+    "watch": "babel app.jsx --out-file app.js --watch & tailwindcss -i ./src/input.css -o ./tailwind.css --watch",
+    "build:css": "tailwindcss -i ./src/input.css -o ./tailwind.css --minify"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.0",

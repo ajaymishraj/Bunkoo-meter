@@ -1,16 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    './index.html',
-    './app.jsx',
-  ],
+  content: ["./index.html", "./app.js"],
   theme: {
-    extend: {
-      fontFamily: { sans: ['Inter', 'sans-serif'] },
-      colors: {
-        zinc: { 850: '#1f1f22', 950: '#0c0c0e' }
-      }
-    }
+    extend: {},
   },
   plugins: [],
 }

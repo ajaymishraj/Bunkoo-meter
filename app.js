@@ -1132,16 +1132,16 @@ const InputForm = ({
   });
   const [error, setError] = useState(null);
   useEffect(() => {
-    if (initialData && !isInitial) {
+    if (initialData) {
       setFormData(prev => ({
         ...prev,
-        conducted: initialData.conducted,
-        attended: initialData.attended,
-        perDay: initialData.perDay,
-        target: initialData.target
+        conducted: initialData.conducted ?? prev.conducted,
+        attended: initialData.attended ?? prev.attended,
+        perDay: initialData.perDay ?? prev.perDay,
+        target: initialData.target ?? prev.target
       }));
     }
-  }, [initialData?.conducted, initialData?.attended, initialData?.perDay, initialData?.target, isInitial]);
+  }, [initialData?.conducted, initialData?.attended, initialData?.perDay, initialData?.target]);
   const handleSubmit = e => {
     e.preventDefault();
     setError(null);
@@ -1178,11 +1178,50 @@ const InputForm = ({
       target: 85
     }
   }];
+
+  // Onboarding hero shown only on first-time setup
+  const onboardingHero = isInitial ? /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md mb-6 animate-fade-up text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-300 text-xs font-semibold mb-4 tracking-wide"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: '10px'
+    }
+  }, "\u2726"), "Smart Attendance Tracker"), /*#__PURE__*/React.createElement("h1", {
+    className: "text-3xl sm:text-4xl font-black text-white mb-3 leading-tight tracking-tight"
+  }, "Welcome to ", /*#__PURE__*/React.createElement("span", {
+    className: "bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent"
+  }, "Bunkoo Meter")), /*#__PURE__*/React.createElement("p", {
+    className: "text-zinc-400 text-sm sm:text-base leading-relaxed mb-5"
+  }, "Enter your current attendance numbers once and get real-time insights \u2014 how many classes you can skip, how many you need to attend, and your stress index."), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2 mb-2"
+  }, [{
+    icon: "🎯",
+    label: "Safe bunk count"
+  }, {
+    icon: "📈",
+    label: "Recovery planner"
+  }, {
+    icon: "🧠",
+    label: "Stress index"
+  }].map((f, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "bg-zinc-900/60 border border-white/5 rounded-xl p-3 flex flex-col items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-lg"
+  }, f.icon), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-zinc-400 font-medium leading-tight text-center"
+  }, f.label))))) : null;
   return /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex flex-col items-center"
+  }, onboardingHero, /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-md bg-zinc-900/90 backdrop-blur-xl p-8 rounded-3xl border border-zinc-800 shadow-2xl animate-scale-in"
   }, /*#__PURE__*/React.createElement("h2", {
-    className: "text-2xl font-bold text-white mb-6 text-center"
-  }, isInitial ? "Initialize Bunkoo Meter" : "Edit Parameters"), /*#__PURE__*/React.createElement("form", {
+    className: "text-2xl font-bold text-white mb-1 text-center"
+  }, isInitial ? "Set Up Your Attendance" : "Edit Parameters"), isInitial && /*#__PURE__*/React.createElement("p", {
+    className: "text-zinc-500 text-xs text-center mb-6"
+  }, "You can update these any time from the settings icon."), /*#__PURE__*/React.createElement("form", {
     onSubmit: handleSubmit,
     className: "space-y-5"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -1319,7 +1358,7 @@ const InputForm = ({
       }
       e.target.value = null;
     }
-  }))));
+  })))));
 };
 const GoalSeeker = ({
   data
@@ -2301,8 +2340,15 @@ const TodayCard = ({
     className: "flex-1 py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50"
   }, "Submit")));
 };
-
-// --- FRIENDS COMPARISON COMPONENT ---
+const getFb = () => window.__fb || null;
+const getRoomDoc = roomCode => {
+  const fb = getFb();
+  if (!fb || !fb.db || !roomCode) return null;
+  return fb.doc(fb.db, "rooms", roomCode);
+};
+const isRoomCreator = (room, localUserId) => {
+  return !!room && room.creatorId === localUserId;
+};
 const FriendsPage = ({
   data
 }) => {
@@ -2315,6 +2361,7 @@ const FriendsPage = ({
   const [motivationalLine, setMotivationalLine] = useState("");
   const [isCreator, setIsCreator] = useState(false);
   const [roomData, setRoomData] = useState(null);
+  const [localUserId, setLocalUserId] = useState(data.localUserId || null);
   const stats = calculateStats(data);
   const myPercent = stats ? stats.currentPercentage.toFixed(1) : "0.0";
   const myBunks = stats ? stats.totalAbsences : 0;
@@ -2328,6 +2375,17 @@ const FriendsPage = ({
       return null;
     }
     return clean;
+  };
+  const ensureLocalUserId = async () => {
+    if (localUserId) return localUserId;
+    const newId = `u-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    setLocalUserId(newId);
+    const newData = {
+      ...data,
+      localUserId: newId
+    };
+    if (data.onUpdateData) data.onUpdateData(newData);
+    return newId;
   };
   const generateRoomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
   const syncMyDataToRoom = async (roomCode, nick) => {
@@ -2346,10 +2404,10 @@ const FriendsPage = ({
   // We'll use Firebase REST API for simplicity since the SDK functions might not be fully exposed globally or we can use the compat SDK which IS included!
   // Oh, wait! The prompt already has: <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script> and firebase-firestore-compat.js is missing but let's assume we can use standard fetch to Firestore REST API, or we can use the modular SDK that was added to index.html. Let's rely on standard fetch to Firestore REST API because it's guaranteed to work without struggling with window exports.
 
-  const dbRef = typeof firebase !== 'undefined' ? firebase.firestore() : null;
   const getRankStats = memList => {
     const sorted = [...memList].sort((a, b) => b.attendancePercent - a.attendancePercent);
-    const myRank = sorted.findIndex(m => m.memberId === data.localUserId) + 1;
+    const currentId = localUserId || data.localUserId;
+    const myRank = sorted.findIndex(m => m.memberId === currentId) + 1;
     const isLast = myRank === sorted.length && sorted.length > 1;
     const topPercent = sorted[0]?.attendancePercent || 0;
     return {
@@ -2360,22 +2418,38 @@ const FriendsPage = ({
     };
   };
   useEffect(() => {
-    if (!activeRoom || !dbRef) return;
-    const roomDoc = dbRef.collection("rooms").doc(activeRoom);
-    const unsub = roomDoc.onSnapshot(async docSnap => {
-      if (docSnap.exists) {
+    if (!activeRoom || !getFb()) return;
+    const roomDoc = getRoomDoc(activeRoom);
+    if (!roomDoc) return;
+    const unsub = getFb().onSnapshot(roomDoc, async docSnap => {
+      if (docSnap.exists()) {
         const d = docSnap.data();
         setRoomData(d);
         const mems = d.members || [];
         setMembers(mems);
-        setIsCreator(d.creatorId === data.localUserId);
+        const currentId = localUserId || data.localUserId;
+        setIsCreator(isRoomCreator(d, currentId));
+
+        // Automatically delete room if there are 0 users
+        if (mems.length === 0) {
+          try {
+            await getFb().deleteDoc(roomDoc);
+          } catch (e) {}
+          setActiveRoom(null);
+          handleUpdateData({
+            ...data,
+            activeRoomCode: null
+          });
+          return;
+        }
 
         // Check if I was removed
-        if (!mems.find(m => m.memberId === data.localUserId)) {
+        if (!mems.find(m => m.memberId === currentId)) {
           if (data.onShowInAppToast) data.onShowInAppToast("You were removed from the room or the room was closed by the creator.");
           setActiveRoom(null);
           handleUpdateData({
             ...data,
+            localUserId: currentId,
             activeRoomCode: null
           });
         } else {
@@ -2408,24 +2482,26 @@ const FriendsPage = ({
       }
     });
     return () => unsub();
-  }, [activeRoom, dbRef, data.localUserId, myPercent]);
+  }, [activeRoom, localUserId, data.localUserId, myPercent]);
 
   // Sync my data whenever it changes and I'm in a room
   useEffect(() => {
     const sync = async () => {
-      if (activeRoom && dbRef && nickname) {
+      const currentId = localUserId || data.localUserId;
+      if (activeRoom && getFb() && nickname && currentId) {
         try {
-          const roomDoc = dbRef.collection("rooms").doc(activeRoom);
-          const docSnap = await roomDoc.get();
-          if (docSnap.exists) {
+          const roomDoc = getRoomDoc(activeRoom);
+          if (!roomDoc) return;
+          const docSnap = await getFb().getDoc(roomDoc);
+          if (docSnap.exists()) {
             let mems = docSnap.data().members || [];
-            let me = mems.find(m => m.memberId === data.localUserId);
+            let me = mems.find(m => m.memberId === currentId);
             if (me) {
               me.attendancePercent = parseFloat(myPercent);
               me.bunkCount = myBunks;
               me.dnaLabel = data.dnaLabel || "The Unknown";
               me.nickname = nickname;
-              await roomDoc.update({
+              await getFb().updateDoc(roomDoc, {
                 members: mems
               });
             }
@@ -2434,20 +2510,22 @@ const FriendsPage = ({
       }
     };
     sync();
-  }, [myPercent, myBunks, data.dnaLabel, activeRoom, dbRef, nickname]);
+  }, [myPercent, myBunks, data.dnaLabel, activeRoom, nickname, localUserId]);
   const handleCreateRoom = async () => {
     const nick = validateNickname(nickname);
     if (!nick) return;
     setLoading(true);
     const code = generateRoomCode();
     try {
-      const roomDoc = dbRef.collection("rooms").doc(code);
-      await roomDoc.set({
+      const currentId = await ensureLocalUserId();
+      const roomDoc = getRoomDoc(code);
+      if (!roomDoc) throw new Error("Firebase is not initialized");
+      await getFb().setDoc(roomDoc, {
         roomCode: code,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        creatorId: data.localUserId,
+        createdAt: getFb().serverTimestamp(),
+        creatorId: currentId,
         members: [{
-          memberId: data.localUserId,
+          memberId: currentId,
           nickname: nick,
           attendancePercent: parseFloat(myPercent),
           bunkCount: myBunks,
@@ -2458,32 +2536,37 @@ const FriendsPage = ({
       });
       handleUpdateData({
         ...data,
+        localUserId: currentId,
         nickname: nick,
         activeRoomCode: code
       });
       setActiveRoom(code);
       if (data.onShowInAppToast) data.onShowInAppToast(`Room ${code} created successfully!`);
     } catch (e) {
-      if (data.onShowInAppToast) data.onShowInAppToast("Failed to create room. Please try again.");
+      console.error("Create room failed:", e);
+      if (data.onShowInAppToast) data.onShowInAppToast(`Failed to create room. ${e?.message || "Please try again."}`);
     }
     setLoading(false);
   };
   const handleJoinRoom = async () => {
     const nick = validateNickname(nickname);
     if (!nick) return;
-    if (!joinCode || joinCode.length < 5) {
+    const code = joinCode.trim().toUpperCase();
+    if (!code || code.length < 5) {
       if (data.onShowInAppToast) data.onShowInAppToast("Invalid room code");
       return;
     }
     setLoading(true);
     try {
-      const roomDoc = dbRef.collection("rooms").doc(joinCode.toUpperCase());
-      const docSnap = await roomDoc.get();
-      if (docSnap.exists) {
+      const currentId = await ensureLocalUserId();
+      const roomDoc = getRoomDoc(code);
+      if (!roomDoc) throw new Error("Firebase is not initialized");
+      const docSnap = await getFb().getDoc(roomDoc);
+      if (docSnap.exists()) {
         let mems = docSnap.data().members || [];
-        if (!mems.find(m => m.memberId === data.localUserId)) {
+        if (!mems.find(m => m.memberId === currentId)) {
           mems.push({
-            memberId: data.localUserId,
+            memberId: currentId,
             nickname: nick,
             attendancePercent: parseFloat(myPercent),
             bunkCount: myBunks,
@@ -2491,64 +2574,79 @@ const FriendsPage = ({
             joinedAt: Date.now(),
             isCreator: false
           });
-          await roomDoc.update({
+          await getFb().updateDoc(roomDoc, {
             members: mems
           });
         }
         handleUpdateData({
           ...data,
+          localUserId: currentId,
           nickname: nick,
-          activeRoomCode: joinCode.toUpperCase()
+          activeRoomCode: code
         });
-        setActiveRoom(joinCode.toUpperCase());
+        setActiveRoom(code);
         if (data.onShowInAppToast) data.onShowInAppToast("Joined room successfully!");
       } else {
         if (data.onShowInAppToast) data.onShowInAppToast("Room not found. Check the code and try again 🤔");
       }
     } catch (e) {
-      if (data.onShowInAppToast) data.onShowInAppToast("Failed to join room.");
+      console.error("Join room failed:", e);
+      if (data.onShowInAppToast) data.onShowInAppToast(`Failed to join room. ${e?.message || "Please try again."}`);
     }
     setLoading(false);
   };
+  const clearActiveRoom = message => {
+    handleUpdateData({
+      ...data,
+      activeRoomCode: null
+    });
+    setActiveRoom(null);
+    setMembers([]);
+    setRoomData(null);
+    setIsCreator(false);
+    if (message && data.onShowInAppToast) data.onShowInAppToast(message);
+  };
   const handleLeaveRoom = async () => {
-    if (!activeRoom || !dbRef) return;
+    if (!activeRoom) return;
+    setLoading(true);
     try {
-      const roomDoc = dbRef.collection("rooms").doc(activeRoom);
-      const docSnap = await roomDoc.get();
-      if (docSnap.exists) {
-        let d = docSnap.data();
-        let mems = d.members || [];
-        mems = mems.filter(m => m.memberId !== data.localUserId);
-        if (mems.length === 0) {
-          // Everyone left
-          await roomDoc.delete();
-        } else {
-          await roomDoc.update({
-            members: mems
-          });
+      const currentId = localUserId || (await ensureLocalUserId());
+      const roomDoc = getRoomDoc(activeRoom);
+      if (roomDoc && getFb()) {
+        const docSnap = await getFb().getDoc(roomDoc);
+        if (docSnap.exists()) {
+          let d = docSnap.data();
+          let mems = d.members || [];
+          mems = mems.filter(m => m.memberId !== currentId);
+          if (mems.length === 0) {
+            await getFb().deleteDoc(roomDoc);
+          } else {
+            await getFb().updateDoc(roomDoc, {
+              members: mems
+            });
+          }
         }
       }
-      handleUpdateData({
-        ...data,
-        activeRoomCode: null
-      });
-      setActiveRoom(null);
-      if (data.onShowInAppToast) data.onShowInAppToast("You left the room.");
-    } catch (e) {}
+      clearActiveRoom("You left the room.");
+    } catch (e) {
+      console.warn("Failed to leave room remotely:", e);
+      clearActiveRoom("Left locally. The room may still show for others if the network failed.");
+    } finally {
+      setLoading(false);
+    }
   };
   const handleDeleteRoom = async () => {
-    if (!activeRoom || !dbRef) return;
+    if (!activeRoom) return;
     if (!window.confirm("Are you sure you want to delete this room? Everyone will be kicked out.")) return;
     try {
-      const roomDoc = dbRef.collection("rooms").doc(activeRoom);
-      await roomDoc.delete();
-      handleUpdateData({
-        ...data,
-        activeRoomCode: null
-      });
-      setActiveRoom(null);
-      if (data.onShowInAppToast) data.onShowInAppToast("Room deleted.");
-    } catch (e) {}
+      const roomDoc = getRoomDoc(activeRoom);
+      if (!roomDoc) return;
+      await getFb().deleteDoc(roomDoc);
+      clearActiveRoom("Room deleted.");
+    } catch (e) {
+      console.warn("Failed to delete room remotely:", e);
+      clearActiveRoom("Room removed from this device. Remote delete failed.");
+    }
   };
   const [copied, setCopied] = useState(false);
   const handleCopyCode = () => {
@@ -3319,6 +3417,9 @@ Reply in this EXACT JSON format with no extra text, no markdown, no backticks:
     data: augmentedData
   })));
 };
+const isAttendanceDataComplete = data => {
+  return data && typeof data.conducted === "number" && typeof data.attended === "number" && typeof data.perDay === "number" && typeof data.target === "number";
+};
 const App = () => {
   const [data, setData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -3382,7 +3483,7 @@ const App = () => {
     migrateData().then(() => {
       setMigrated(true);
       getAttendanceData().then(d => {
-        if (d) {
+        if (d && isAttendanceDataComplete(d)) {
           setData(d);
           scheduleNotifications(d);
         }
@@ -3759,14 +3860,14 @@ const App = () => {
     className: "flex items-center justify-center min-h-[70vh]"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-zinc-400"
-  }, "Loading...")) : !data || isEditing ? /*#__PURE__*/React.createElement("div", {
+  }, "Loading...")) : !data || !isAttendanceDataComplete(data) || isEditing ? /*#__PURE__*/React.createElement("div", {
     key: "form",
-    className: "w-full h-full flex items-center justify-center min-h-[70vh]"
+    className: !data || !isAttendanceDataComplete(data) ? "w-full flex flex-col items-center py-8" : "w-full h-full flex items-center justify-center min-h-[70vh]"
   }, /*#__PURE__*/React.createElement(InputForm, {
     initialData: dataWithActions,
     onSave: handleSave,
     onCancel: data ? () => setIsEditing(false) : undefined,
-    isInitial: !data
+    isInitial: !isAttendanceDataComplete(data)
   })) : currentTab === "friends" ? /*#__PURE__*/React.createElement("div", {
     key: "friends",
     className: "w-full animate-fade-in"
@@ -3812,5 +3913,65 @@ const App = () => {
     className: "px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-bold text-white transition-all"
   }, "Install"))));
 };
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hasError: false
+    };
+  }
+  static getDerivedStateFromError() {
+    return {
+      hasError: true
+    };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          padding: "24px",
+          textAlign: "center",
+          background: "#09090b",
+          color: "#fff"
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: "48px",
+          marginBottom: "16px"
+        }
+      }, "\u26A0\uFE0F"), /*#__PURE__*/React.createElement("h2", {
+        style: {
+          marginBottom: "8px",
+          fontSize: "24px"
+        }
+      }, "Oops, something went wrong!"), /*#__PURE__*/React.createElement("p", {
+        style: {
+          color: "#a1a1aa",
+          marginBottom: "24px"
+        }
+      }, "An unexpected error occurred. Please refresh the page to try again."), /*#__PURE__*/React.createElement("button", {
+        onClick: () => window.location.reload(),
+        style: {
+          padding: "12px 24px",
+          background: "#3b82f6",
+          color: "#fff",
+          border: "none",
+          borderRadius: "8px",
+          fontSize: "16px",
+          cursor: "pointer"
+        }
+      }, "Refresh Page"));
+    }
+    return this.props.children;
+  }
+}
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(/*#__PURE__*/React.createElement(App, null));
+root.render(/*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/React.createElement(App, null)));
