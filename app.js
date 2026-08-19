@@ -81,6 +81,19 @@ const Icons = {
     cx: "12",
     cy: "12",
     r: "10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "8",
+    x2: "12",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "16",
+    x2: "12.01",
+    y2: "16"
+  })),
+  ShieldCheck: p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+    d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
   }), /*#__PURE__*/React.createElement("path", {
     d: "m9 12 2 2 4-4"
   })),
@@ -1456,7 +1469,7 @@ const AttendanceCalendar = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [markedDates, setMarkedDates] = useState(new Map()); // Map<dateKey, 'absent' | 'present'>
-  const [isHolidayMode, setIsHolidayMode] = useState(false);
+
   const getDaysInMonth = date => ({
     days: new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate(),
     firstDay: new Date(date.getFullYear(), date.getMonth(), 1).getDay()
@@ -1477,7 +1490,7 @@ const AttendanceCalendar = ({
   };
   const isDayOff = date => {
     const day = date.getDay();
-    return day === 0 || (data && data.saturdaysOff && day === 6);
+    return day === 0 || Boolean(data && data.saturdaysOff) && day === 6;
   };
 
   // Keep the reference for external updates
@@ -1521,35 +1534,16 @@ const AttendanceCalendar = ({
   const toggleDate = async day => {
     const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, 12, 0, 0);
     const key = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
-    if (isHolidayMode) {
-      const holidays = data.holidays || [];
-      let newHolidays;
-      if (holidays.includes(key)) {
-        newHolidays = holidays.filter(h => h !== key);
-      } else {
-        newHolidays = [...holidays, key];
-      }
-      // Assuming data and saveAttendanceData are correctly available
-      await saveAttendanceData({
-        ...data,
-        holidays: newHolidays
-      });
-      // The parent component should pass a method to reload data, but for now we'll rely on the app reload mechanism or state pass back if possible. Wait, saveAttendanceData doesn't automatically trigger a re-render unless we update the global state. Let's fix this in the main app state.
-      // We will need an onUpdateData prop for the calendar.
-      if (data.onUpdateData) {
-        data.onUpdateData({
-          ...data,
-          holidays: newHolidays
-        });
-      }
-      return;
-    }
 
     // Check if past date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const isPast = clickedDate.setHours(0, 0, 0, 0) < today.getTime();
     const isToday = clickedDate.getTime() === today.getTime();
+    const isOffDay = isDayOff(clickedDate);
+
+    // Today and off days are not toggled in projection planner
+    if (isToday || isOffDay) return;
 
     // Check if before earliest start date
     let isBeforeStart = false;
@@ -1560,11 +1554,8 @@ const AttendanceCalendar = ({
     } else {
       isBeforeStart = isPast; // If no records exist, they haven't started yet
     }
-
-    // Today is handled by QuickMark, not the calendar
-    if (isToday && !isHolidayMode) return;
     if (isPast) {
-      if (isBeforeStart && !isHolidayMode && !calendarRecords[key]) {
+      if (isBeforeStart && !calendarRecords[key]) {
         if (data.onShowToast) data.onShowToast("Cannot edit dates from before you started tracking.");
         return;
       }
@@ -1612,11 +1603,9 @@ const AttendanceCalendar = ({
 
     // Iterate through each day from tomorrow to last marked date
     for (let d = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 12, 0, 0); d <= lastDate; d.setDate(d.getDate() + 1)) {
-      if (isDayOff(d)) continue; // Skip off days
+      if (isDayOff(d)) continue; // Skip off days (Sundays, and Saturdays if enabled)
 
       const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
-      // Skip holidays — they don't count as conducted or absent
-      if (data.holidays && data.holidays.includes(key)) continue;
       const status = markedDates.get(key);
 
       // Only count dates that are explicitly marked
@@ -1756,18 +1745,28 @@ const AttendanceCalendar = ({
   }), /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-bold text-zinc-400 uppercase tracking-wider"
   }, "Smart Attendance Planner")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setIsHolidayMode(!isHolidayMode),
-    className: `text-xs px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all border flex-1 sm:flex-none ${isHolidayMode ? "bg-amber-500/20 text-amber-400 border-amber-500/50" : "bg-zinc-800/50 text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-white"}`,
-    title: "Click dates to mark as holiday"
-  }, isHolidayMode ? /*#__PURE__*/React.createElement(Check, {
-    size: 14
-  }) : /*#__PURE__*/React.createElement(Calendar, {
-    size: 14
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 text-xs md:text-sm font-medium text-zinc-300 hover:text-white cursor-pointer select-none transition-colors"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    id: "saturdays-off-checkbox",
+    checked: Boolean(data && data.saturdaysOff),
+    onChange: async e => {
+      const newVal = e.target.checked;
+      const updated = {
+        ...(data || {}),
+        saturdaysOff: newVal
+      };
+      await saveAttendanceData(updated);
+      if (data && data.onUpdateData) {
+        data.onUpdateData(updated);
+      }
+    },
+    className: "w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-zinc-900 cursor-pointer accent-purple-600"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "whitespace-nowrap font-medium"
-  }, isHolidayMode ? "Done Adding" : "Add Off Days")), markedDates.size > 0 && /*#__PURE__*/React.createElement("button", {
+    className: "whitespace-nowrap"
+  }, "Saturdays Off")), markedDates.size > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => setMarkedDates(new Map()),
     className: "text-xs px-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 transition-all flex items-center justify-center gap-1.5 font-bold shadow-[0_0_10px_rgba(239,68,68,0.2)] flex-1 sm:flex-none",
     "aria-label": "Clear all selections"
@@ -1795,13 +1794,7 @@ const AttendanceCalendar = ({
     className: "w-3 h-3 rounded bg-zinc-900/30 border border-zinc-700"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-zinc-400"
-  }, "Sunday (Off)")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50 border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-3 h-3 rounded bg-orange-500/40 border border-orange-500/60"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-zinc-400"
-  }, "Holiday")), /*#__PURE__*/React.createElement("div", {
+  }, "Off Day")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50 border border-white/5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-3 h-3 rounded bg-yellow-500/40 border border-yellow-500/60"
@@ -1878,12 +1871,9 @@ const AttendanceCalendar = ({
     const status = markedDates.get(key);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    // Only limit interaction for projection (isPast) when NOT in holiday mode
     const isPast = dateObj.setHours(0, 0, 0, 0) < today.getTime();
     const isToday = dateObj.getTime() === today.getTime();
     const isOffDay = isDayOff(dateObj);
-    const isHoliday = data.holidays && data.holidays.includes(key);
     let isBeforeStart = false;
     if (earliestDateStr) {
       const e = new Date(earliestDateStr);
@@ -1895,9 +1885,7 @@ const AttendanceCalendar = ({
     let className = "h-8 md:h-10 rounded-lg text-[11px] md:text-sm font-medium border transition-all duration-200 ";
     let inlineStyle = {};
     const recordAttended = calendarRecords[key];
-    if (isHoliday) {
-      className += "bg-orange-500/40 text-orange-200 border-orange-500/60 cursor-pointer shadow-lg shadow-orange-500/20";
-    } else if (isToday && !isHolidayMode) {
+    if (isToday) {
       // Today: show record status with special ring (non-clickable, QuickMark handles it)
       if (recordAttended !== undefined) {
         const pct = recordAttended / data.perDay;
@@ -1907,7 +1895,7 @@ const AttendanceCalendar = ({
       } else {
         className += "bg-purple-500/10 text-white border-purple-400 ring-2 ring-purple-400/50 font-bold cursor-default";
       }
-    } else if (isPast && !isHolidayMode) {
+    } else if (isPast) {
       if (isBeforeStart && recordAttended === undefined) {
         className += "text-zinc-700 bg-transparent border-transparent cursor-not-allowed pointer-events-none";
       } else if (recordAttended !== undefined) {
@@ -1918,12 +1906,14 @@ const AttendanceCalendar = ({
       } else if (!isOffDay) {
         // Past unmarked working day — show warning style
         className += "text-zinc-500 border-dashed border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10 hover:text-white";
+      } else {
+        className += "text-zinc-600 border-zinc-700 bg-zinc-900/30 cursor-not-allowed pointer-events-none";
       }
-    } else if (isOffDay && !isHolidayMode) {
+    } else if (isOffDay) {
       className += "text-zinc-600 border-zinc-700 bg-zinc-900/30 cursor-not-allowed pointer-events-none";
-    } else if (status === "absent" && !isHolidayMode) {
+    } else if (status === "absent") {
       className += "bg-red-500/20 text-red-200 border-red-500/50 hover:bg-red-500/30 cursor-pointer shadow-lg shadow-red-500/10";
-    } else if (status === "present" && !isHolidayMode) {
+    } else if (status === "present") {
       className += "bg-emerald-500/20 text-emerald-200 border-emerald-500/50 hover:bg-emerald-500/30 cursor-pointer shadow-lg shadow-emerald-500/10";
     } else {
       className += "bg-zinc-800/30 text-zinc-400 hover:bg-zinc-800 hover:text-white border-transparent cursor-pointer hover:scale-105";
@@ -1931,10 +1921,10 @@ const AttendanceCalendar = ({
     return /*#__PURE__*/React.createElement("button", {
       key: day,
       onClick: () => toggleDate(day),
-      disabled: isOffDay && !isHolidayMode || isToday && !isHolidayMode,
+      disabled: isOffDay || isToday,
       className: className,
       style: inlineStyle,
-      title: isHolidayMode ? "Click to toggle holiday" : isToday ? recordAttended !== undefined ? `Today: ${recordAttended}/${data.perDay} (use button above to edit)` : "Today — use the Mark button above" : isHoliday ? "Holiday" : isPast && !isHolidayMode ? recordAttended !== undefined ? `Attended ${recordAttended}/${data.perDay} - Click to edit` : "⚠️ Unmarked — click to set" : isOffDay ? "Off Day" : status === "absent" ? "Planned Absent" : status === "present" ? "Planned Present" : "Click to mark"
+      title: isToday ? recordAttended !== undefined ? `Today: ${recordAttended}/${data.perDay} (use button above to edit)` : "Today — use the Mark button above" : isPast ? recordAttended !== undefined ? `Attended ${recordAttended}/${data.perDay} - Click to edit` : isOffDay ? dateObj.getDay() === 0 ? "Sunday - Off Day" : "Saturday - Off Day" : "⚠️ Unmarked — click to set" : isOffDay ? dateObj.getDay() === 0 ? "Sunday - Off Day" : "Saturday - Off Day" : status === "absent" ? "Planned Absent" : status === "present" ? "Planned Present" : "Click to mark"
     }, day);
   }))), /*#__PURE__*/React.createElement("div", {
     className: "w-full lg:w-96 bg-[#09090b] border border-white/5 rounded-2xl p-4 md:p-6 max-h-[500px] overflow-y-auto custom-scrollbar"
@@ -2132,7 +2122,6 @@ const TodayCard = ({
   const [dropdownValue, setDropdownValue] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [todayKey, setTodayKey] = useState("");
-  const [isHoliday, setIsHoliday] = useState(false);
   const [isOffToday, setIsOffToday] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
   useEffect(() => {
@@ -2142,13 +2131,11 @@ const TodayCard = ({
       setTodayKey(key);
 
       // Check if today is an off day (Sunday or Saturday when enabled)
-      if (now.getDay() === 0 || (data && data.saturdaysOff && now.getDay() === 6)) {
+      if (now.getDay() === 0 || Boolean(data && data.saturdaysOff) && now.getDay() === 6) {
         setIsOffToday(true);
         return;
-      }
-      if (data.holidays && data.holidays.includes(key)) {
-        setIsHoliday(true);
-        return;
+      } else {
+        setIsOffToday(false);
       }
 
       // Check if after 4:20 PM
@@ -2179,15 +2166,6 @@ const TodayCard = ({
     }, "\uD83D\uDE34 It's a day off!"), /*#__PURE__*/React.createElement("p", {
       className: "text-blue-200/70 text-sm"
     }, "No classes today. Recharge for the week ahead."));
-  }
-  if (isHoliday) {
-    return /*#__PURE__*/React.createElement("div", {
-      className: "w-full bg-gradient-to-r from-orange-900/20 to-amber-900/20 border border-orange-500/30 rounded-2xl p-5 mb-6 text-center shadow-lg animate-fade-in"
-    }, /*#__PURE__*/React.createElement("h3", {
-      className: "text-orange-400 font-bold text-lg mb-1"
-    }, "\uD83C\uDF89 Today's a Holiday!"), /*#__PURE__*/React.createElement("p", {
-      className: "text-orange-200/70 text-sm"
-    }, "No classes, no stress. Enjoy."));
   }
   if (record) {
     return /*#__PURE__*/React.createElement("div", {
@@ -2855,7 +2833,6 @@ const QuickMark = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [todayKey, setTodayKey] = useState("");
-  const [isHoliday, setIsHoliday] = useState(false);
   const [isOffToday, setIsOffToday] = useState(false);
   useEffect(() => {
     const checkToday = async () => {
@@ -2863,13 +2840,11 @@ const QuickMark = ({
       const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       setTodayKey(key);
       // Check if today is an off day (Sunday or Saturday when enabled)
-      if (now.getDay() === 0 || (data && data.saturdaysOff && now.getDay() === 6)) {
+      if (now.getDay() === 0 || Boolean(data && data.saturdaysOff) && now.getDay() === 6) {
         setIsOffToday(true);
         return;
-      }
-      if (data.holidays && data.holidays.includes(key)) {
-        setIsHoliday(true);
-        return;
+      } else {
+        setIsOffToday(false);
       }
       const existingRecord = await getDailyRecord(key);
       if (existingRecord) setRecord(existingRecord);
@@ -2921,13 +2896,6 @@ const QuickMark = ({
     setShowDropdown(true);
   };
   if (!data.perDay || data.perDay <= 0) return null;
-  if (isHoliday) {
-    return /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-end mb-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] font-bold flex items-center gap-1"
-    }, "\uD83C\uDF89 Holiday"));
-  }
   if (isOffToday) {
     return /*#__PURE__*/React.createElement("div", {
       className: "flex justify-end mb-1"
@@ -3042,11 +3010,9 @@ const MissingDaysWarning = ({
           d.setDate(d.getDate() - i);
           if (d < earliestDate) continue; // Skip days before user started using the app
 
-          if (d.getDay() === 0) continue; // Skip Sundays
-
+          // Skip Sundays and Saturdays if saturdaysOff
+          if (d.getDay() === 0 || Boolean(data && data.saturdaysOff) && d.getDay() === 6) continue;
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          if (data.holidays && data.holidays.includes(key)) continue; // Skip holidays
-
           if (!recordDates.has(key)) {
             missing++;
           }
@@ -3309,7 +3275,7 @@ Reply in this EXACT JSON format with no extra text, no markdown, no backticks:
     icon: Calendar,
     color: "text-orange-400",
     subtitle: `~${stats.daysToRecover} working days`,
-    description: `Excluding Sundays, approximately ${Math.ceil(stats.daysToRecover / 6)} weeks`
+    description: Boolean(data && data.saturdaysOff) ? `Excluding weekends, approximately ${Math.ceil(stats.daysToRecover / 5)} weeks` : `Excluding Sundays, approximately ${Math.ceil(stats.daysToRecover / 6)} weeks`
   }), /*#__PURE__*/React.createElement(StatCard, {
     title: "Status",
     value: stats.isImpossible ? "Impossible" : stats.daysToRecover > 30 ? "Very Hard" : "Achievable",
@@ -3567,29 +3533,29 @@ const App = () => {
         });
       }, delay);
     };
-    const isHoliday = appData.holidays && appData.holidays.includes(todayKey);
+    const isTodayOff = now.getDay() === 0 || Boolean(appData.saturdaysOff) && now.getDay() === 6;
     const todayRecord = await getDailyRecord(todayKey);
     const notMarkedToday = !todayRecord;
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
-    const yesterdayHoliday = appData.holidays && appData.holidays.includes(yesterdayKey);
+    const yesterdayIsOff = yesterday.getDay() === 0 || Boolean(appData.saturdaysOff) && yesterday.getDay() === 6;
     const yesterdayRecord = await getDailyRecord(yesterdayKey);
     const pct = appData.conducted > 0 ? appData.attended / appData.conducted * 100 : 0;
 
     // Morning (8-10 AM): Missed yesterday
     if (now.getHours() >= 8 && now.getHours() < 11) {
-      triggerIfDue('morning_reminder', `Generate a single short humorous morning notification (max 12 words) telling a student they forgot to mark yesterday's attendance. Gently sarcastic. English only.`, "Yesterday's attendance is missing. Did you even exist? 👻", () => notMarkedToday && !yesterdayRecord && !yesterdayHoliday && !(yesterday.getDay() === 0 || (appData && appData.saturdaysOff && yesterday.getDay() === 6)), 2000);
+      triggerIfDue('morning_reminder', `Generate a single short humorous morning notification (max 12 words) telling a student they forgot to mark yesterday's attendance. Gently sarcastic. English only.`, "Yesterday's attendance is missing. Did you even exist? 👻", () => notMarkedToday && !yesterdayRecord && !yesterdayIsOff, 2000);
     }
 
     // 4:30 PM Reminder
     if (now.getHours() >= 16 && now.getMinutes() >= 30) {
-      triggerIfDue('afternoon_reminder', `Generate a single short humorous notification (max 12 words) reminding a student to mark their college attendance for today. Be funny, not preachy. English only.`, "Time to mark attendance! Your data won't fill itself 📊", () => notMarkedToday && !isHoliday && !(now.getDay() === 0 || (appData && appData.saturdaysOff && now.getDay() === 6)), 2000);
+      triggerIfDue('afternoon_reminder', `Generate a single short humorous notification (max 12 words) reminding a student to mark their college attendance for today. Be funny, not preachy. English only.`, "Time to mark attendance! Your data won't fill itself 📊", () => notMarkedToday && !isTodayOff, 2000);
     }
 
     // 9:00 PM Urgent Reminder
     if (now.getHours() >= 21) {
-      triggerIfDue('urgent_reminder', `Generate a single short humorous notification (max 12 words) urgently reminding a student who STILL hasn't marked attendance. Slightly dramatic. English only.`, "Still not marked? Your attendance graph is crying 📉", () => notMarkedToday && !isHoliday && !(now.getDay() === 0 || (appData && appData.saturdaysOff && now.getDay() === 6)), 2000);
+      triggerIfDue('urgent_reminder', `Generate a single short humorous notification (max 12 words) urgently reminding a student who STILL hasn't marked attendance. Slightly dramatic. English only.`, "Still not marked? Your attendance graph is crying 📉", () => notMarkedToday && !isTodayOff, 2000);
     }
 
     // Sunday 8 PM - Weekly Roast & Export Reminder

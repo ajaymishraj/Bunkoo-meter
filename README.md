@@ -18,7 +18,7 @@
 
 - 🤖 **AI Insights** - Smart analytics and attendance pattern recognition
 - 🏆 **Leaderboard** - Real-time performance rankings and achievements
-- 📅 **Holiday Management** - Automated holiday calendar and vacation tracking
+- 📅 **Saturday & Weekend Customization** - Toggle Saturdays off and smart attendance planning
 - ✅ **Daily Marking** - Quick one-tap attendance marking interface
 - 📱 **Progressive Web App** - Works seamlessly on web, mobile, and desktop
 - 🔗 **Real-time Sync** - Cloud-based synchronization with Firebase

@@ -1406,7 +1406,6 @@ const GoalSeeker = ({ data }) => {
 const AttendanceCalendar = ({ data }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [markedDates, setMarkedDates] = useState(new Map()); // Map<dateKey, 'absent' | 'present'>
-  const [isHolidayMode, setIsHolidayMode] = useState(false);
 
   const getDaysInMonth = (date) => ({
     days: new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate(),
@@ -1430,7 +1429,7 @@ const AttendanceCalendar = ({ data }) => {
 
   const isDayOff = (date) => {
     const day = date.getDay();
-    return day === 0 || (data && data.saturdaysOff && day === 6);
+    return day === 0 || (Boolean(data && data.saturdaysOff) && day === 6);
   };
 
   // Keep the reference for external updates
@@ -1492,29 +1491,15 @@ const AttendanceCalendar = ({ data }) => {
       day,
     );
 
-    if (isHolidayMode) {
-      const holidays = data.holidays || [];
-      let newHolidays;
-      if (holidays.includes(key)) {
-        newHolidays = holidays.filter((h) => h !== key);
-      } else {
-        newHolidays = [...holidays, key];
-      }
-      // Assuming data and saveAttendanceData are correctly available
-      await saveAttendanceData({ ...data, holidays: newHolidays });
-      // The parent component should pass a method to reload data, but for now we'll rely on the app reload mechanism or state pass back if possible. Wait, saveAttendanceData doesn't automatically trigger a re-render unless we update the global state. Let's fix this in the main app state.
-      // We will need an onUpdateData prop for the calendar.
-      if (data.onUpdateData) {
-        data.onUpdateData({ ...data, holidays: newHolidays });
-      }
-      return;
-    }
-
     // Check if past date
     const today = new Date();
     today.setHours(0,0,0,0);
     const isPast = clickedDate.setHours(0,0,0,0) < today.getTime();
     const isToday = clickedDate.getTime() === today.getTime();
+    const isOffDay = isDayOff(clickedDate);
+
+    // Today and off days are not toggled in projection planner
+    if (isToday || isOffDay) return;
 
     // Check if before earliest start date
     let isBeforeStart = false;
@@ -1526,11 +1511,8 @@ const AttendanceCalendar = ({ data }) => {
       isBeforeStart = isPast; // If no records exist, they haven't started yet
     }
 
-    // Today is handled by QuickMark, not the calendar
-    if (isToday && !isHolidayMode) return;
-
     if (isPast) {
-      if (isBeforeStart && !isHolidayMode && !calendarRecords[key]) {
+      if (isBeforeStart && !calendarRecords[key]) {
         if (data.onShowToast) data.onShowToast("Cannot edit dates from before you started tracking.");
         return;
       }
@@ -1585,11 +1567,9 @@ const AttendanceCalendar = ({ data }) => {
       d <= lastDate;
       d.setDate(d.getDate() + 1)
     ) {
-      if (isDayOff(d)) continue; // Skip off days
+      if (isDayOff(d)) continue; // Skip off days (Sundays, and Saturdays if enabled)
 
       const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
-      // Skip holidays — they don't count as conducted or absent
-      if (data.holidays && data.holidays.includes(key)) continue;
 
       const status = markedDates.get(key);
 
@@ -1758,20 +1738,22 @@ const AttendanceCalendar = ({ data }) => {
           </h3>
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-xs md:text-sm font-medium text-zinc-300 hover:text-white cursor-pointer select-none transition-colors">
             <input
               type="checkbox"
-              checked={!!(data && data.saturdaysOff)}
+              id="saturdays-off-checkbox"
+              checked={Boolean(data && data.saturdaysOff)}
               onChange={async (e) => {
                 const newVal = e.target.checked;
-                try {
-                  await saveAttendanceData({ ...(data || {}), saturdaysOff: newVal });
-                  if (data && data.onUpdateData) data.onUpdateData({ ...(data || {}), saturdaysOff: newVal });
-                } catch (err) {}
+                const updated = { ...(data || {}), saturdaysOff: newVal };
+                await saveAttendanceData(updated);
+                if (data && data.onUpdateData) {
+                  data.onUpdateData(updated);
+                }
               }}
-              className="h-4 w-4 rounded"
+              className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-zinc-900 cursor-pointer accent-purple-600"
             />
-            <span className="whitespace-nowrap font-medium">Saturdays Off</span>
+            <span className="whitespace-nowrap">Saturdays Off</span>
           </label>
           {markedDates.size > 0 && (
             <button
@@ -1797,11 +1779,7 @@ const AttendanceCalendar = ({ data }) => {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50 border border-white/5">
           <div className="w-3 h-3 rounded bg-zinc-900/30 border border-zinc-700"></div>
-          <span className="text-zinc-400">Sunday (Off)</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50 border border-white/5">
-          <div className="w-3 h-3 rounded bg-orange-500/40 border border-orange-500/60"></div>
-          <span className="text-zinc-400">Holiday</span>
+          <span className="text-zinc-400">Off Day</span>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50 border border-white/5">
           <div className="w-3 h-3 rounded bg-yellow-500/40 border border-yellow-500/60"></div>
@@ -1939,11 +1917,9 @@ const AttendanceCalendar = ({ data }) => {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
 
-              // Only limit interaction for projection (isPast) when NOT in holiday mode
               const isPast = dateObj.setHours(0, 0, 0, 0) < today.getTime();
               const isToday = dateObj.getTime() === today.getTime();
               const isOffDay = isDayOff(dateObj);
-              const isHoliday = data.holidays && data.holidays.includes(key);
 
               let isBeforeStart = false;
               if (earliestDateStr) {
@@ -1960,9 +1936,7 @@ const AttendanceCalendar = ({ data }) => {
 
               const recordAttended = calendarRecords[key];
 
-              if (isHoliday) {
-                className += "bg-orange-500/40 text-orange-200 border-orange-500/60 cursor-pointer shadow-lg shadow-orange-500/20";
-              } else if (isToday && !isHolidayMode) {
+              if (isToday) {
                 // Today: show record status with special ring (non-clickable, QuickMark handles it)
                 if (recordAttended !== undefined) {
                   const pct = recordAttended / data.perDay;
@@ -1972,7 +1946,7 @@ const AttendanceCalendar = ({ data }) => {
                 } else {
                   className += "bg-purple-500/10 text-white border-purple-400 ring-2 ring-purple-400/50 font-bold cursor-default";
                 }
-              } else if (isPast && !isHolidayMode) {
+              } else if (isPast) {
                 if (isBeforeStart && recordAttended === undefined) {
                   className += "text-zinc-700 bg-transparent border-transparent cursor-not-allowed pointer-events-none";
                 } else if (recordAttended !== undefined) {
@@ -1984,14 +1958,17 @@ const AttendanceCalendar = ({ data }) => {
                   // Past unmarked working day — show warning style
                   className +=
                     "text-zinc-500 border-dashed border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10 hover:text-white";
+                } else {
+                  className +=
+                    "text-zinc-600 border-zinc-700 bg-zinc-900/30 cursor-not-allowed pointer-events-none";
                 }
-              } else if (isOffDay && !isHolidayMode) {
+              } else if (isOffDay) {
                 className +=
                   "text-zinc-600 border-zinc-700 bg-zinc-900/30 cursor-not-allowed pointer-events-none";
-              } else if (status === "absent" && !isHolidayMode) {
+              } else if (status === "absent") {
                 className +=
                   "bg-red-500/20 text-red-200 border-red-500/50 hover:bg-red-500/30 cursor-pointer shadow-lg shadow-red-500/10";
-              } else if (status === "present" && !isHolidayMode) {
+              } else if (status === "present") {
                 className +=
                   "bg-emerald-500/20 text-emerald-200 border-emerald-500/50 hover:bg-emerald-500/30 cursor-pointer shadow-lg shadow-emerald-500/10";
               } else {
@@ -2003,25 +1980,21 @@ const AttendanceCalendar = ({ data }) => {
                 <button
                   key={day}
                   onClick={() => toggleDate(day)}
-                  disabled={(isOffDay && !isHolidayMode) || (isToday && !isHolidayMode)}
+                  disabled={isOffDay || isToday}
                   className={className}
                   style={inlineStyle}
                   title={
-                    isHolidayMode
-                      ? "Click to toggle holiday"
-                      : isToday
-                        ? (recordAttended !== undefined ? `Today: ${recordAttended}/${data.perDay} (use button above to edit)` : "Today — use the Mark button above")
-                        : isHoliday
-                          ? "Holiday"
-                          : isPast && !isHolidayMode
-                            ? (recordAttended !== undefined ? `Attended ${recordAttended}/${data.perDay} - Click to edit` : "⚠️ Unmarked — click to set")
-                            : isOffDay
-                              ? "Off Day"
-                              : status === "absent"
-                                ? "Planned Absent"
-                                : status === "present"
-                                  ? "Planned Present"
-                                  : "Click to mark"
+                    isToday
+                      ? (recordAttended !== undefined ? `Today: ${recordAttended}/${data.perDay} (use button above to edit)` : "Today — use the Mark button above")
+                      : isPast
+                        ? (recordAttended !== undefined ? `Attended ${recordAttended}/${data.perDay} - Click to edit` : isOffDay ? (dateObj.getDay() === 0 ? "Sunday - Off Day" : "Saturday - Off Day") : "⚠️ Unmarked — click to set")
+                        : isOffDay
+                          ? (dateObj.getDay() === 0 ? "Sunday - Off Day" : "Saturday - Off Day")
+                          : status === "absent"
+                            ? "Planned Absent"
+                            : status === "present"
+                              ? "Planned Present"
+                              : "Click to mark"
                   }
                 >
                   {day}
@@ -2273,7 +2246,6 @@ const TodayCard = ({ data }) => {
   const [dropdownValue, setDropdownValue] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [todayKey, setTodayKey] = useState("");
-  const [isHoliday, setIsHoliday] = useState(false);
   const [isOffToday, setIsOffToday] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
 
@@ -2284,14 +2256,11 @@ const TodayCard = ({ data }) => {
       setTodayKey(key);
 
       // Check if today is an off day (Sunday or Saturday when enabled)
-      if (now.getDay() === 0 || (data && data.saturdaysOff && now.getDay() === 6)) {
+      if (now.getDay() === 0 || (Boolean(data && data.saturdaysOff) && now.getDay() === 6)) {
         setIsOffToday(true);
         return;
-      }
-
-      if (data.holidays && data.holidays.includes(key)) {
-        setIsHoliday(true);
-        return;
+      } else {
+        setIsOffToday(false);
       }
 
       // Check if after 4:20 PM
@@ -2322,15 +2291,6 @@ const TodayCard = ({ data }) => {
       <div className="w-full bg-gradient-to-r from-blue-900/20 to-indigo-900/20 border border-blue-500/30 rounded-2xl p-5 mb-6 text-center shadow-lg animate-fade-in">
         <h3 className="text-blue-400 font-bold text-lg mb-1">😴 It's a day off!</h3>
         <p className="text-blue-200/70 text-sm">No classes today. Recharge for the week ahead.</p>
-      </div>
-    );
-  }
-
-  if (isHoliday) {
-    return (
-      <div className="w-full bg-gradient-to-r from-orange-900/20 to-amber-900/20 border border-orange-500/30 rounded-2xl p-5 mb-6 text-center shadow-lg animate-fade-in">
-        <h3 className="text-orange-400 font-bold text-lg mb-1">🎉 Today's a Holiday!</h3>
-        <p className="text-orange-200/70 text-sm">No classes, no stress. Enjoy.</p>
       </div>
     );
   }
@@ -3001,7 +2961,6 @@ const QuickMark = ({ data }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [todayKey, setTodayKey] = useState("");
-  const [isHoliday, setIsHoliday] = useState(false);
   const [isOffToday, setIsOffToday] = useState(false);
 
   useEffect(() => {
@@ -3010,13 +2969,11 @@ const QuickMark = ({ data }) => {
       const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       setTodayKey(key);
       // Check if today is an off day (Sunday or Saturday when enabled)
-      if (now.getDay() === 0 || (data && data.saturdaysOff && now.getDay() === 6)) {
+      if (now.getDay() === 0 || (Boolean(data && data.saturdaysOff) && now.getDay() === 6)) {
         setIsOffToday(true);
         return;
-      }
-      if (data.holidays && data.holidays.includes(key)) {
-        setIsHoliday(true);
-        return;
+      } else {
+        setIsOffToday(false);
       }
       const existingRecord = await getDailyRecord(key);
       if (existingRecord) setRecord(existingRecord);
@@ -3072,16 +3029,6 @@ const QuickMark = ({ data }) => {
   };
 
   if (!data.perDay || data.perDay <= 0) return null;
-
-  if (isHoliday) {
-    return (
-      <div className="flex justify-end mb-1">
-        <div className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] font-bold flex items-center gap-1">
-          🎉 Holiday
-        </div>
-      </div>
-    );
-  }
 
   if (isOffToday) {
     return (
@@ -3222,11 +3169,10 @@ const MissingDaysWarning = ({ data }) => {
           
           if (d < earliestDate) continue; // Skip days before user started using the app
           
-          if (d.getDay() === 0) continue; // Skip Sundays
+          // Skip Sundays and Saturdays if saturdaysOff
+          if (d.getDay() === 0 || (Boolean(data && data.saturdaysOff) && d.getDay() === 6)) continue;
           
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          
-          if (data.holidays && data.holidays.includes(key)) continue; // Skip holidays
           
           if (!recordDates.has(key)) {
             missing++;
@@ -3536,7 +3482,7 @@ Reply in this EXACT JSON format with no extra text, no markdown, no backticks:
                 icon={Calendar}
                 color="text-orange-400"
                 subtitle={`~${stats.daysToRecover} working days`}
-                description={`Excluding Sundays, approximately ${Math.ceil(stats.daysToRecover / 6)} weeks`}
+                description={Boolean(data && data.saturdaysOff) ? `Excluding weekends, approximately ${Math.ceil(stats.daysToRecover / 5)} weeks` : `Excluding Sundays, approximately ${Math.ceil(stats.daysToRecover / 6)} weeks`}
               />
               <StatCard
                 title="Status"
@@ -3809,14 +3755,14 @@ const App = () => {
       }, delay);
     };
 
-    const isHoliday = appData.holidays && appData.holidays.includes(todayKey);
+    const isTodayOff = now.getDay() === 0 || (Boolean(appData.saturdaysOff) && now.getDay() === 6);
     const todayRecord = await getDailyRecord(todayKey);
     const notMarkedToday = !todayRecord;
 
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
-    const yesterdayHoliday = appData.holidays && appData.holidays.includes(yesterdayKey);
+    const yesterdayIsOff = yesterday.getDay() === 0 || (Boolean(appData.saturdaysOff) && yesterday.getDay() === 6);
     const yesterdayRecord = await getDailyRecord(yesterdayKey);
 
     const pct = appData.conducted > 0 ? (appData.attended / appData.conducted) * 100 : 0;
@@ -3826,7 +3772,7 @@ const App = () => {
       triggerIfDue('morning_reminder',
         `Generate a single short humorous morning notification (max 12 words) telling a student they forgot to mark yesterday's attendance. Gently sarcastic. English only.`,
         "Yesterday's attendance is missing. Did you even exist? 👻",
-        () => notMarkedToday && !yesterdayRecord && !yesterdayHoliday && yesterday.getDay() !== 0,
+        () => notMarkedToday && !yesterdayRecord && !yesterdayIsOff,
         2000
       );
     }
@@ -3836,7 +3782,7 @@ const App = () => {
       triggerIfDue('afternoon_reminder',
         `Generate a single short humorous notification (max 12 words) reminding a student to mark their college attendance for today. Be funny, not preachy. English only.`,
         "Time to mark attendance! Your data won't fill itself 📊",
-        () => notMarkedToday && !isHoliday && now.getDay() !== 0,
+        () => notMarkedToday && !isTodayOff,
         2000
       );
     }
@@ -3846,7 +3792,7 @@ const App = () => {
       triggerIfDue('urgent_reminder',
         `Generate a single short humorous notification (max 12 words) urgently reminding a student who STILL hasn't marked attendance. Slightly dramatic. English only.`,
         "Still not marked? Your attendance graph is crying 📉",
-        () => notMarkedToday && !isHoliday && now.getDay() !== 0,
+        () => notMarkedToday && !isTodayOff,
         2000
       );
     }
