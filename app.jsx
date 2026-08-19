@@ -1428,7 +1428,10 @@ const AttendanceCalendar = ({ data }) => {
     return new Date(y, m - 1, d, 12, 0, 0);
   };
 
-  const isSunday = (date) => date.getDay() === 0;
+  const isDayOff = (date) => {
+    const day = date.getDay();
+    return day === 0 || (data && data.saturdaysOff && day === 6);
+  };
 
   // Keep the reference for external updates
   useEffect(() => {
@@ -1582,7 +1585,7 @@ const AttendanceCalendar = ({ data }) => {
       d <= lastDate;
       d.setDate(d.getDate() + 1)
     ) {
-      if (isSunday(d)) continue; // Skip Sundays
+      if (isDayOff(d)) continue; // Skip off days
 
       const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
       // Skip holidays — they don't count as conducted or absent
@@ -1754,19 +1757,22 @@ const AttendanceCalendar = ({ data }) => {
             Smart Attendance Planner
           </h3>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsHolidayMode(!isHolidayMode)}
-            className={`text-xs px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all border flex-1 sm:flex-none ${
-              isHolidayMode
-                ? "bg-amber-500/20 text-amber-400 border-amber-500/50"
-                : "bg-zinc-800/50 text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-white"
-            }`}
-            title="Click dates to mark as holiday"
-          >
-            {isHolidayMode ? <Check size={14} /> : <Calendar size={14} />}
-            <span className="whitespace-nowrap font-medium">{isHolidayMode ? "Done Adding" : "Add Off Days"}</span>
-          </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!(data && data.saturdaysOff)}
+              onChange={async (e) => {
+                const newVal = e.target.checked;
+                try {
+                  await saveAttendanceData({ ...(data || {}), saturdaysOff: newVal });
+                  if (data && data.onUpdateData) data.onUpdateData({ ...(data || {}), saturdaysOff: newVal });
+                } catch (err) {}
+              }}
+              className="h-4 w-4 rounded"
+            />
+            <span className="whitespace-nowrap font-medium">Saturdays Off</span>
+          </label>
           {markedDates.size > 0 && (
             <button
               onClick={() => setMarkedDates(new Map())}
@@ -1936,7 +1942,7 @@ const AttendanceCalendar = ({ data }) => {
               // Only limit interaction for projection (isPast) when NOT in holiday mode
               const isPast = dateObj.setHours(0, 0, 0, 0) < today.getTime();
               const isToday = dateObj.getTime() === today.getTime();
-              const isSundayDay = isSunday(dateObj);
+              const isOffDay = isDayOff(dateObj);
               const isHoliday = data.holidays && data.holidays.includes(key);
 
               let isBeforeStart = false;
@@ -1974,12 +1980,12 @@ const AttendanceCalendar = ({ data }) => {
                   className += "border border-white/5 shadow-lg cursor-pointer hover:border-white/20";
                   inlineStyle.backgroundColor = getGradientColor(pct);
                   inlineStyle.color = getGradientTextColor(pct);
-                } else if (!isSundayDay) {
+                } else if (!isOffDay) {
                   // Past unmarked working day — show warning style
                   className +=
                     "text-zinc-500 border-dashed border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10 hover:text-white";
                 }
-              } else if (isSundayDay && !isHolidayMode) {
+              } else if (isOffDay && !isHolidayMode) {
                 className +=
                   "text-zinc-600 border-zinc-700 bg-zinc-900/30 cursor-not-allowed pointer-events-none";
               } else if (status === "absent" && !isHolidayMode) {
@@ -1997,7 +2003,7 @@ const AttendanceCalendar = ({ data }) => {
                 <button
                   key={day}
                   onClick={() => toggleDate(day)}
-                  disabled={(isSundayDay && !isHolidayMode) || (isToday && !isHolidayMode)}
+                  disabled={(isOffDay && !isHolidayMode) || (isToday && !isHolidayMode)}
                   className={className}
                   style={inlineStyle}
                   title={
@@ -2009,8 +2015,8 @@ const AttendanceCalendar = ({ data }) => {
                           ? "Holiday"
                           : isPast && !isHolidayMode
                             ? (recordAttended !== undefined ? `Attended ${recordAttended}/${data.perDay} - Click to edit` : "⚠️ Unmarked — click to set")
-                            : isSundayDay
-                              ? "Sunday - Off Day"
+                            : isOffDay
+                              ? "Off Day"
                               : status === "absent"
                                 ? "Planned Absent"
                                 : status === "present"
@@ -2268,7 +2274,7 @@ const TodayCard = ({ data }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [todayKey, setTodayKey] = useState("");
   const [isHoliday, setIsHoliday] = useState(false);
-  const [isSunday, setIsSunday] = useState(false);
+  const [isOffToday, setIsOffToday] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
 
   useEffect(() => {
@@ -2277,9 +2283,9 @@ const TodayCard = ({ data }) => {
       const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       setTodayKey(key);
 
-      // Check if today is Sunday
-      if (now.getDay() === 0) {
-        setIsSunday(true);
+      // Check if today is an off day (Sunday or Saturday when enabled)
+      if (now.getDay() === 0 || (data && data.saturdaysOff && now.getDay() === 6)) {
+        setIsOffToday(true);
         return;
       }
 
@@ -2311,10 +2317,10 @@ const TodayCard = ({ data }) => {
     );
   }
 
-  if (isSunday) {
+  if (isOffToday) {
     return (
       <div className="w-full bg-gradient-to-r from-blue-900/20 to-indigo-900/20 border border-blue-500/30 rounded-2xl p-5 mb-6 text-center shadow-lg animate-fade-in">
-        <h3 className="text-blue-400 font-bold text-lg mb-1">😴 It's Sunday!</h3>
+        <h3 className="text-blue-400 font-bold text-lg mb-1">😴 It's a day off!</h3>
         <p className="text-blue-200/70 text-sm">No classes today. Recharge for the week ahead.</p>
       </div>
     );
@@ -2996,16 +3002,16 @@ const QuickMark = ({ data }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [todayKey, setTodayKey] = useState("");
   const [isHoliday, setIsHoliday] = useState(false);
-  const [isSunday, setIsSunday] = useState(false);
+  const [isOffToday, setIsOffToday] = useState(false);
 
   useEffect(() => {
     const checkToday = async () => {
       const now = new Date();
       const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       setTodayKey(key);
-      // Check if today is Sunday
-      if (now.getDay() === 0) {
-        setIsSunday(true);
+      // Check if today is an off day (Sunday or Saturday when enabled)
+      if (now.getDay() === 0 || (data && data.saturdaysOff && now.getDay() === 6)) {
+        setIsOffToday(true);
         return;
       }
       if (data.holidays && data.holidays.includes(key)) {
@@ -3077,11 +3083,11 @@ const QuickMark = ({ data }) => {
     );
   }
 
-  if (isSunday) {
+  if (isOffToday) {
     return (
       <div className="flex justify-end mb-1">
         <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-bold flex items-center gap-1">
-          😴 Sunday
+          😴 Off Day
         </div>
       </div>
     );
