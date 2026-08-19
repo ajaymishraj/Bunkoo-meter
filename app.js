@@ -81,24 +81,6 @@ const Icons = {
     cx: "12",
     cy: "12",
     r: "10"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-3"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "flex items-center gap-2 text-sm"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: !!(data && data.saturdaysOff),
-    onChange: async e => {
-      const newVal = e.target.checked;
-      try {
-        await saveAttendanceData({ ...(data || {}), saturdaysOff: newVal });
-        if (data && data.onUpdateData) data.onUpdateData({ ...(data || {}), saturdaysOff: newVal });
-      } catch (err) {}
-    },
-    className: "h-4 w-4 rounded"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "whitespace-nowrap font-medium"
-  }, "Saturdays Off")), markedDates.size > 0 && /*#__PURE__*/React.createElement("button", {
   }), /*#__PURE__*/React.createElement("path", {
     d: "m9 12 2 2 4-4"
   })),
