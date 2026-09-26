@@ -383,6 +383,16 @@ const {
   Users
 } = Icons;
 
+// Home icon for Navigation
+Icons.Home = p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+  d: "m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+}), /*#__PURE__*/React.createElement("polyline", {
+  points: "9 22 9 12 15 12 15 22"
+}));
+const {
+  Home
+} = Icons;
+
 // Edit2 icon (pencil) for QuickMark
 Icons.Edit2 = p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
   d: "M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
@@ -3773,7 +3783,7 @@ const App = () => {
     hour: "2-digit",
     minute: "2-digit"
   }))), data && !isEditing && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-center flex-shrink-0 mx-2"
+    className: "hidden sm:flex items-center justify-center flex-shrink-0 mx-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center bg-zinc-900/80 rounded-full border border-white/10 p-1 shadow-inner"
   }, /*#__PURE__*/React.createElement("button", {
@@ -3813,7 +3823,7 @@ const App = () => {
     size: 18,
     className: "sm:w-5 sm:h-5"
   }))))), /*#__PURE__*/React.createElement("main", {
-    className: "pt-20 sm:pt-24 px-3 sm:px-4 md:px-6 min-h-screen flex flex-col items-center relative z-10"
+    className: "pt-20 sm:pt-24 px-3 sm:px-4 md:px-6 min-h-screen flex flex-col items-center relative z-10 pb-24 sm:pb-8"
   }, !migrated ? /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-center min-h-[70vh]"
   }, /*#__PURE__*/React.createElement("div", {
@@ -3846,14 +3856,38 @@ const App = () => {
       onShowToast: showToast,
       onShowInAppToast: showInAppToast
     }
-  }))), notification && /*#__PURE__*/React.createElement("div", {
-    className: "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500/90 backdrop-blur-md text-white shadow-lg flex items-center gap-2 animate-slide-up"
+  }))), data && !isEditing && /*#__PURE__*/React.createElement("nav", {
+    "aria-label": "Mobile Navigation",
+    className: "sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#09090b]/90 backdrop-blur-xl border-t border-white/10 px-6 py-2 shadow-2xl shadow-black",
+    style: {
+      paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-around max-w-sm mx-auto"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setCurrentTab("home"),
+    className: `flex flex-col items-center justify-center py-1.5 px-6 rounded-2xl transition-all duration-200 ${currentTab === "home" ? "text-purple-400 font-bold bg-purple-500/15 shadow-[0_0_12px_rgba(168,85,247,0.2)]" : "text-zinc-400 hover:text-zinc-200"}`
+  }, /*#__PURE__*/React.createElement(Home, {
+    size: 20,
+    className: currentTab === "home" ? "stroke-[2.5]" : "stroke-[1.75]"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] mt-1 tracking-wide"
+  }, "Home")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setCurrentTab("friends"),
+    className: `flex flex-col items-center justify-center py-1.5 px-6 rounded-2xl transition-all duration-200 ${currentTab === "friends" ? "text-purple-400 font-bold bg-purple-500/15 shadow-[0_0_12px_rgba(168,85,247,0.2)]" : "text-zinc-400 hover:text-zinc-200"}`
+  }, /*#__PURE__*/React.createElement(Users, {
+    size: 20,
+    className: currentTab === "friends" ? "stroke-[2.5]" : "stroke-[1.75]"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] mt-1 tracking-wide"
+  }, "Friends")))), notification && /*#__PURE__*/React.createElement("div", {
+    className: "fixed bottom-20 sm:bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500/90 backdrop-blur-md text-white shadow-lg flex items-center gap-2 animate-slide-up"
   }, /*#__PURE__*/React.createElement(CheckCircle, {
     size: 18
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-sm font-medium"
   }, notification.message)), showPWA && /*#__PURE__*/React.createElement("div", {
-    className: "fixed bottom-4 left-4 right-4 z-50 bg-[#09090b]/90 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up"
+    className: "fixed bottom-20 sm:bottom-4 left-4 right-4 z-50 bg-[#09090b]/90 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement(Download, {

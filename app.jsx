@@ -293,6 +293,15 @@ Icons.Users = (p) => (
 );
 const { Users } = Icons;
 
+// Home icon for Navigation
+Icons.Home = (p) => (
+  <Icon {...p}>
+    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </Icon>
+);
+const { Home } = Icons;
+
 // Edit2 icon (pencil) for QuickMark
 Icons.Edit2 = (p) => (
   <Icon {...p}>
@@ -4046,9 +4055,9 @@ const App = () => {
           </p>
         </div>
 
-        {/* Center: Tabs */}
+        {/* Center: Tabs (hidden on mobile, visible on desktop) */}
         {data && !isEditing && (
-          <div className="flex items-center justify-center flex-shrink-0 mx-2">
+          <div className="hidden sm:flex items-center justify-center flex-shrink-0 mx-2">
             <div className="flex items-center bg-zinc-900/80 rounded-full border border-white/10 p-1 shadow-inner">
               <button
                 onClick={() => setCurrentTab("home")}
@@ -4100,7 +4109,7 @@ const App = () => {
           )}
         </div>
       </header>
-      <main className="pt-20 sm:pt-24 px-3 sm:px-4 md:px-6 min-h-screen flex flex-col items-center relative z-10">
+      <main className="pt-20 sm:pt-24 px-3 sm:px-4 md:px-6 min-h-screen flex flex-col items-center relative z-10 pb-24 sm:pb-8">
           {!migrated ? (
             <div className="flex items-center justify-center min-h-[70vh]">
               <div className="text-zinc-400">Loading...</div>
@@ -4130,16 +4139,51 @@ const App = () => {
             </div>
           )}
       </main>
+      {/* Mobile Bottom Navigation Bar */}
+      {data && !isEditing && (
+        <nav
+          aria-label="Mobile Navigation"
+          className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#09090b]/90 backdrop-blur-xl border-t border-white/10 px-6 py-2 shadow-2xl shadow-black"
+          style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
+        >
+          <div className="flex items-center justify-around max-w-sm mx-auto">
+            <button
+              onClick={() => setCurrentTab("home")}
+              className={`flex flex-col items-center justify-center py-1.5 px-6 rounded-2xl transition-all duration-200 ${
+                currentTab === "home"
+                  ? "text-purple-400 font-bold bg-purple-500/15 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <Home size={20} className={currentTab === "home" ? "stroke-[2.5]" : "stroke-[1.75]"} />
+              <span className="text-[11px] mt-1 tracking-wide">Home</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentTab("friends")}
+              className={`flex flex-col items-center justify-center py-1.5 px-6 rounded-2xl transition-all duration-200 ${
+                currentTab === "friends"
+                  ? "text-purple-400 font-bold bg-purple-500/15 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <Users size={20} className={currentTab === "friends" ? "stroke-[2.5]" : "stroke-[1.75]"} />
+              <span className="text-[11px] mt-1 tracking-wide">Friends</span>
+            </button>
+          </div>
+        </nav>
+      )}
+
       {notification && (
         <div
-          className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500/90 backdrop-blur-md text-white shadow-lg flex items-center gap-2 animate-slide-up"
+          className="fixed bottom-20 sm:bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500/90 backdrop-blur-md text-white shadow-lg flex items-center gap-2 animate-slide-up"
         >
           <CheckCircle size={18} />
           <span className="text-sm font-medium">{notification.message}</span>
         </div>
       )}
       {showPWA && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 bg-[#09090b]/90 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up">
+        <div className="fixed bottom-20 sm:bottom-4 left-4 right-4 z-50 bg-[#09090b]/90 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up">
           <div className="flex items-center gap-3">
             <Download className="text-blue-400" size={24} />
             <div>
