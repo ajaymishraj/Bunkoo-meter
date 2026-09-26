@@ -21,17 +21,17 @@
     <title>Bunkoo Meter</title>
     <meta name="theme-color" content="#09090b" />
     <link rel="icon" href="./logo.png" type="image/png" />
-    <link rel="apple-touch-icon" href="./logopic.png?v=5" />
-    <link rel="manifest" href="./manifest.json?v=5" />
+    <link rel="apple-touch-icon" href="./logopic.png?v=6" />
+    <link rel="manifest" href="./manifest.json?v=6" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
 
     <!-- Tailwind CSS (Required for styling) -->
-    <link rel="stylesheet" href="./tailwind.css?v=2.6" />
+    <link rel="stylesheet" href="./tailwind.css?v=3.0" />
 
-    <link rel="stylesheet" href="./styles.css?v=1.4" />
+    <link rel="stylesheet" href="./styles.css?v=1.5" />
 
     <!-- Firebase SDK -->
     <script src="./firebase.config.js?v=1.3"></script>
@@ -93,11 +93,56 @@
 
     <script src="./config.js"></script>
 
-    <!-- Register Service Worker for PWA -->
+    <!-- Register Service Worker for PWA with automatic cache clearing and auto-update -->
     <script>
+      const APP_VERSION = "5.0";
+      // Clear old caches if version changed
+      if (localStorage.getItem("bunkoo_app_version") !== APP_VERSION) {
+        localStorage.setItem("bunkoo_app_version", APP_VERSION);
+        if ("caches" in window) {
+          caches.keys().then((names) => {
+            names.forEach((name) => {
+              if (name !== "bunkoo-meter-v24") {
+                caches.delete(name);
+              }
+            });
+          });
+        }
+      }
+
       if ("serviceWorker" in navigator) {
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data && event.data.type === "NEW_VERSION_AVAILABLE") {
+            if (!refreshing) {
+              refreshing = true;
+              window.location.reload();
+            }
+          }
+        });
+
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("./sw.js").catch(() => {});
+          navigator.serviceWorker
+            .register("./sw.js")
+            .then((registration) => {
+              // Check for update immediately
+              registration.update();
+
+              // Check for update when user re-focuses or brings app to foreground
+              document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible") {
+                  registration.update();
+                }
+              });
+            })
+            .catch(() => {});
         });
       }
     </script>
@@ -133,6 +178,6 @@
     </div>
     <div id="root"></div>
     <div class="watermark">Designed by Ajay Mishra</div>
-    <script src="./app.js?v=4.4"></script>
+    <script src="./app.js?v=5.0"></script>
   </body>
 </html>
