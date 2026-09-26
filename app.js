@@ -1571,11 +1571,13 @@ const AttendanceCalendar = ({
     const newMarked = new Map(markedDates);
     const currentState = newMarked.get(key);
 
-    // 2-state toggle: first click = absent, second = present
-    if (!currentState || currentState === "present") {
+    // 3-state toggle: 1st click = absent, 2nd click = present, 3rd click = unselect (cleared/not calculated)
+    if (!currentState) {
       newMarked.set(key, "absent");
-    } else {
+    } else if (currentState === "absent") {
       newMarked.set(key, "present");
+    } else {
+      newMarked.delete(key);
     }
     setMarkedDates(newMarked);
   };
@@ -1938,7 +1940,7 @@ const AttendanceCalendar = ({
     className: "text-zinc-600 text-xs mb-2"
   }, "Click on future dates to plan your attendance"), /*#__PURE__*/React.createElement("p", {
     className: "text-zinc-700 text-[10px]"
-  }, "\uD83D\uDCA1 Tip: Click once for Absent, twice for Present")) : /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDCA1 Tip: Click once for Absent, twice for Present, 3 times to unselect")) : /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
   }, simulation.timeline.map((day, i) => /*#__PURE__*/React.createElement("div", {
     key: i,

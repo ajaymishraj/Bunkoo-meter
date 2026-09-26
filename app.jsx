@@ -1526,11 +1526,13 @@ const AttendanceCalendar = ({ data }) => {
     const newMarked = new Map(markedDates);
     const currentState = newMarked.get(key);
 
-    // 2-state toggle: first click = absent, second = present
-    if (!currentState || currentState === "present") {
+    // 3-state toggle: 1st click = absent, 2nd click = present, 3rd click = unselect (cleared/not calculated)
+    if (!currentState) {
       newMarked.set(key, "absent");
-    } else {
+    } else if (currentState === "absent") {
       newMarked.set(key, "present");
+    } else {
+      newMarked.delete(key);
     }
 
     setMarkedDates(newMarked);
@@ -2016,7 +2018,7 @@ const AttendanceCalendar = ({ data }) => {
                 Click on future dates to plan your attendance
               </p>
               <p className="text-zinc-700 text-[10px]">
-                💡 Tip: Click once for Absent, twice for Present
+                💡 Tip: Click once for Absent, twice for Present, 3 times to unselect
               </p>
             </div>
           ) : (
